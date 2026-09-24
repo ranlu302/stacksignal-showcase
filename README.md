@@ -11,6 +11,8 @@ and how advertised salaries compare across Australia.
 
 </div>
 
+![StackSignal overview: gather job-market signals, organize and check the information, then explore skills, locations and salaries. A separate workspace tracks applications.](assets/overview.svg)
+
 ## What you can explore
 
 ### Which skills are employers asking for?
@@ -44,6 +46,10 @@ Two sources provide different perspectives: **job advertisements** show individu
 The sections below explain the implementation, its reliability guarantees and the work still to be verified.
 
 ### System architecture
+
+![StackSignal architecture: independent postings and occupation-trend pipelines feed a Streamlit application, alongside a separate private career store.](assets/architecture.svg)
+
+This is an architecture illustration, not an application screenshot or deployment topology.
 
 Two independent analytical pipelines support the application: individual job postings and official occupation-demand trends. Personal application tracking is a separate private workspace.
 
@@ -82,7 +88,7 @@ A useful dashboard must make its denominators, exclusions and observation window
 
 The hosted application reads a restricted export of posting facts from allowlisted employer ATS and government hosts. Advertisement text, provider captures and personal application records are excluded. The public Job explorer has no application-writing controls. Docker build checks reject private workspace files from the deployment image.
 
-This public repository contains this README only. Application source code, tests, deployment scripts, provider captures, databases and personal application records are not distributed here.
+This public repository contains this README and two project illustrations only. Application source code, tests, deployment scripts, provider captures, databases and personal application records are not distributed here.
 
 ## Verification
 
