@@ -12,7 +12,7 @@ Explore employer skill demand, observed opportunities and advertised salaries—
 
 ## Project at a glance
 
-**A personal engineering project by [Ran Lu](https://github.com/ranlu302).** My work spans source integration, data validation and processing, dashboard development, automated testing, infrastructure as code and release automation.
+My work spans source integration, data validation and processing, dashboard development, automated testing, infrastructure as code and release automation.
 
 - **Delivered:** two independent analytical pipelines and a read-only dashboard hosted on AWS.
 - **Engineering focus:** recoverable ingestion, consistent dataset publication, explicit metric contracts and tested release recovery.
