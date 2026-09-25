@@ -4,132 +4,97 @@
 
 ### See the market. Focus your next move.
 
-Explore the skills employers seek, where Data Engineer opportunities appear,
-and how advertised salaries compare across Australia.
+Explore employer skill demand, observed opportunities and advertised salaries—with explicit sample limits and reproducible data processing.
 
-[**Open live demo →**](https://stacksignal.duckdns.org) · [What you can explore](#what-you-can-explore) · [How it works](#how-it-works) · [Under the hood](#under-the-hood)
+[**Explore the live demo →**](https://stacksignal.duckdns.org) · [Engineering decisions](#engineering-decisions) · [Verification and recovery](#verification-and-recovery) · [Deployment](#deployment)
 
 </div>
 
-![StackSignal overview: gather job-market signals, organize and check the information, then explore skills, locations and salaries. A separate workspace tracks applications.](assets/overview.svg)
+## Project at a glance
+
+**A personal engineering project by [Ran Lu](https://github.com/ranlu302).** My work spans source integration, data validation and processing, dashboard development, automated testing, infrastructure as code and release automation.
+
+- **Delivered:** two independent analytical pipelines and a read-only dashboard hosted on AWS.
+- **Engineering focus:** recoverable ingestion, consistent dataset publication, explicit metric contracts and tested release recovery.
+- **Core stack:** Python, Polars, Parquet, Pydantic, Streamlit and SQLite.
+- **Infrastructure and delivery:** AWS EC2, ECR and Systems Manager; Terraform, Docker and GitHub Actions with OIDC authentication.
+
+![Illustrative StackSignal overview: capture job-market signals, check records, then explore skills, locations and salaries. Charts are schematic.](assets/overview.png)
 
 ## What you can explore
 
-### Which skills are employers asking for?
+- **Employer skill demand:** compare the share of usable job descriptions mentioning each tracked skill.
+- **Locations and salaries:** inspect observed opportunities by Australian city and eligible advertised annual salary distributions. Missing salaries and insufficient samples remain visible.
+- **Broader occupation trends:** follow monthly Jobs and Skills Australia vacancy statistics alongside the postings sample.
+- **Individual opportunities:** browse selected posting facts and follow links to the original advertisements.
 
-See the skills mentioned most often in the captured job advertisements. Compare their share of the sample to understand which capabilities recur across opportunities.
+The hosted postings sample contains selected real facts from allowlisted employer ATS and government hosts. It reflects a personal search and those source restrictions; it is not a representative survey of the Australian job market. The occupation series uses broader occupation groups, rather than an exact count of Data Engineer vacancies.
 
-### Where are the opportunities—and what do they pay?
-
-Explore observed vacancies by Australian city and compare eligible advertised annual salaries. Missing salaries stay visible as a gap; small samples are clearly marked rather than turned into misleading comparisons.
-
-### How is broader demand changing?
-
-Follow monthly occupation trends from Jobs and Skills Australia. This provides a wider context alongside individual job advertisements, using broader occupation groups rather than an exact count of Data Engineer roles.
-
-### Which postings can I inspect?
-
-The public Job explorer shows a read-only selection of real posting facts and links to the original advertisements. Personal application tracking stays in the private workspace; application stages, scores, notes and employer advertisement text are excluded from the public export.
-
-## How it works
-
-StackSignal brings scattered information into a consistent view: it collects source records, checks and organizes them, then calculates the comparisons shown in the dashboard. Original captures are retained so results can be reproduced and investigated.
-
-Two sources provide different perspectives: **job advertisements** show individual opportunities, while **official occupation statistics** show broader trends. They are processed independently and presented together.
-
-**Clear limits build trust.** Results describe the captured sample, not the entire Australian job market. The hosted application uses an allowlisted sample of real posting facts, not a representative market survey. Personal application records and provider captures are not published in this showcase.
-
----
-
-## Under the hood
-
-The sections below explain the implementation, its reliability guarantees and the work still to be verified.
-
-### System architecture
+## Architecture
 
 ![StackSignal architecture: independent postings and occupation-trend pipelines feed a Streamlit application, alongside a separate private career store.](assets/architecture.svg)
 
-This is an architecture illustration, not an application screenshot or deployment topology.
+The postings pipeline retains original captures, validates and normalizes records, extracts skills deterministically, and publishes analytical datasets. A separate pipeline processes official occupation-demand statistics. Metric functions are independent of dashboard presentation; personal application tracking uses a separate store.
 
-Two independent analytical pipelines support the application: individual job postings and official occupation-demand trends. Personal application tracking is a separate private workspace.
-
-- **Source adapters** isolate provider retrieval and mapping from processing.
-- **Data pipelines** validate records and publish datasets for their respective analytics paths.
-- **Metric functions** keep business rules separate from dashboard presentation.
-- **The career store** serves the application tracker separately from market datasets.
+The diagram illustrates these logical boundaries. AWS hosts the read-only application; the batch pipeline itself has no cloud dependency.
 
 ## Engineering decisions
 
-### 1. Preserve progress at the ingestion boundary
+### Save progress before requesting the next page
 
-Each successful postings page is persisted before the next request begins. A later request failure leaves earlier captures available for processing. Reprocessing those captures requires no new provider request and produces the same logical records for the same inputs.
+Each successful postings page is persisted immediately. If a later request fails, earlier captures remain available for processing without another provider request. Replaying the same inputs preserves the same logical records.
 
-**Tradeoff:** replay is supported; resuming a mutable provider search from an exact saved cursor is not guaranteed.
+**Tradeoff:** replay is supported; exact cursor resumption against a changing provider search is not guaranteed.
 
-### 2. Publish a consistent dataset generation
+### Publish related datasets as one generation
 
-Postings, extracted skills and processing state are written into a new generation. An atomic pointer switch publishes that generation only after all writes succeed. Readers resolve the pointer once and use that generation throughout a read, preventing mixed-version results. A non-blocking process lock serializes postings writers.
+Postings, extracted skills and processing state are written into a new generation. An atomic pointer switch publishes it only after all writes succeed. Readers resolve that pointer once per read, and a process lock rejects overlapping postings writers.
 
-**Failure behaviour:** failed publication leaves the previous generation selected. Corrupt raw JSON aborts publication instead of silently reducing the dataset.
+**Failure behaviour:** failed publication leaves the previous generation selected. Corrupt raw JSON aborts publication rather than silently reducing the dataset.
 
-**Scope:** these guarantees address process failures on supported local POSIX filesystems. Power-loss durability, distributed coordination and the separate occupation-trend publisher require different guarantees.
+**Boundary:** this protects against process failures on supported local POSIX filesystems. It does not establish power-loss durability or distributed coordination, and does not cover the separate occupation-trend publisher.
 
-### 3. Treat metric definitions as contracts
+### Make metric definitions testable
 
-A useful dashboard must make its denominators, exclusions and observation window clear.
+Skill demand uses the same usable-description cohort for numerator and denominator. Salary percentiles require at least 10 eligible observations, one configured currency and explicit annual salaries; estimates are excluded by default. Missing values remain missing, and hourly or daily rates are not annualized. A deterministic skill taxonomy makes matches inspectable.
 
-- **Skill demand:** jobs mentioning a skill divided by jobs with usable descriptions; both counts use the same cohort.
-- **Salary percentiles:** one configured currency, explicit annual salaries and at least 10 eligible observations. Estimated salaries are excluded by default.
-- **Missing data:** missing values remain missing; hourly and daily rates are not annualized.
-- **Skill extraction:** a deterministic taxonomy with word-boundary matching makes results inspectable and repeatable.
-- **Coverage:** posting, retrieval and first/last observation dates describe the captured sample, not complete labour-market coverage.
+### Separate public facts from personal records
 
-### 4. Keep public facts separate from personal data
+An allowlisted export supplies the hosted application with posting facts and original links. Advertisement text, provider captures and personal application records are excluded. The public explorer has no application-writing controls, and Docker build checks reject private workspace files from the deployment image.
 
-The hosted application reads a restricted export of posting facts from allowlisted employer ATS and government hosts. Advertisement text, provider captures and personal application records are excluded. The public Job explorer has no application-writing controls. Docker build checks reject private workspace files from the deployment image.
+## Deployment
 
-This public repository contains this README and two project illustrations only. Application source code, tests, deployment scripts, provider captures, databases and personal application records are not distributed here.
+The application runs in Docker on a single AWS EC2 instance, with HTTPS provided by Caddy. Terraform defines the infrastructure. GitHub Actions uses OIDC to obtain temporary AWS credentials, publishes images to ECR and invokes deployment through Systems Manager.
 
-## Verification
+Tagged releases control what reaches the public site. The release path validates the image, deploys it and checks application health. A failed candidate health check triggers restoration of the previous container and returns a failure signal.
 
-The private application's offline test suite covers the following behaviours. This is a summary of internal verification, not a publicly executable test suite.
+**Tradeoff:** one instance keeps this portfolio deployment simple, but it is a single point of failure. The project does not claim high availability or zero-downtime deployment.
 
-- **Ingestion recovery:** interrupted pagination preserves previously captured pages.
-- **Publication safety:** failures during dataset, state and pointer publication preserve the previous selected generation.
-- **Concurrency:** overlapping postings writers are rejected; readers use a single generation.
-- **Replay and input integrity:** repeated processing preserves logical results, while corrupt raw input prevents publication.
-- **Metric boundaries:** skill-demand cohort consistency and the salary sample threshold are explicitly tested.
+## Verification and recovery
 
-The private application uses automated linting, tests and fixture-based smoke checks. These checks establish behaviour on test datasets; production-scale throughput has not been benchmarked. No workflows or test artifacts are included in this showcase.
+Offline tests cover interrupted pagination, failed dataset publication, overlapping writers, readers pinned to a generation, replay consistency, corrupt inputs and metric boundaries. Automated quality checks include Ruff, pytest and fixture-based pipeline smoke checks.
 
-## Project objective
+### Recorded AWS recovery exercise — 23 September 2026
 
-StackSignal is a focused project for refreshing data engineering and software engineering skills through implementation, testing and operational exercises. The goal is to build a system whose design decisions and failure behaviour can be explained convincingly in a technical interview, with evidence from the implementation.
+A healthy test container was established on the deployed instance. A deliberately broken image was then deployed over it through Systems Manager, using the deployment script with a separate container name.
 
-The work prioritizes four areas:
+| Check | Recorded result |
+|---|---|
+| Detect the unhealthy candidate | Health checks failed and triggered rollback. |
+| Restore the previous release | The original test container was running and healthy afterward. |
+| Surface the failure | The command returned exit status 1; Systems Manager reported failure. |
+| Preserve recovery state | The last-good image record remained unchanged. |
+| Isolate the exercise | The live application container retained its identity and start timestamp. |
 
-- **Practical reliability:** preserve captured inputs, publish consistent datasets and demonstrate recovery from interrupted processing.
-- **Automated testing:** turn data contracts, business rules and failure scenarios into repeatable checks, with clear limits on what each check proves.
-- **Delivery:** build hands-on experience with Docker, CI and deployment, including release verification and rollback practice.
-- **Operational reasoning:** diagnose stale data, invalid inputs and failed runs; document how to identify the failure, recover and verify the result.
+This exercise verified health-check failure recovery through the deployment script and Systems Manager. It did not test failure propagation through GitHub Actions, continuous request availability, or recovery from every deployment failure. Subsequent startup-failure handling was tested locally; this historical exercise does not validate that later revision on AWS.
 
-Each milestone should produce an explainable engineering decision, a reproducible demonstration and an honest account of the remaining limitations. The public application is available. The deployment runbook records a completed automated release and an isolated failed-release exercise on 23 September 2026. That exercise covered health-check failure and recovery; it does not establish zero downtime or recovery from every deployment failure. Implementation and operational records remain private.
+These are summaries of recorded internal checks. Application source, executable tests and operational records remain private; this showcase provides the product overview, illustrations and demo link. Production-scale throughput has not been benchmarked.
 
-## Technology
+## Data sources
 
-- **Data processing:** Python, Polars, PyArrow / Parquet, Pydantic
-- **Application:** Streamlit, SQLite
-- **Delivery and quality:** Docker, pytest, Ruff, GitHub Actions
+Adapters are implemented for TheirStack and Adzuna; live ingestion and public display remain subject to applicable permissions. Adzuna remains evaluation-only without the required written licence. The hosted export is a separate, restricted selection of posting facts.
 
-Local batch processing keeps the current execution and recovery model inspectable. A public demo is available over HTTPS. Distributed processing and international market expansion are outside the implemented scope.
-
-## Data sources and interpretation
-
-Provider adapters exist for TheirStack and Adzuna. Live ingestion and public display depend on the applicable permissions; Adzuna remains evaluation-only without the required written licence. The hosted public export contains selected real posting facts; its role mix reflects a personal search and its host allowlist, not complete market coverage.
-
-The occupation-demand series is independent of the postings sample. Selected occupation groups serve as a broader demand proxy, rather than an exact count of Data Engineer vacancies.
-
-**Attribution:** [Jobs and Skills Australia — Internet Vacancy Index](https://www.jobsandskills.gov.au/data/internet-vacancy-index). © Commonwealth of Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Occupation trends use the [Jobs and Skills Australia Internet Vacancy Index](https://www.jobsandskills.gov.au/data/internet-vacancy-index). © Commonwealth of Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ---
 
