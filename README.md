@@ -6,7 +6,7 @@
 
 Explore employer skill demand, observed opportunities and advertised salaries—with explicit sample limits and reproducible data processing.
 
-[**Explore the live demo →**](https://stacksignal.duckdns.org) · [Engineering decisions](#engineering-decisions) · [Verification and recovery](#verification-and-recovery) · [Deployment](#deployment)
+[**Explore the live demo →**](https://stacksignal.duckdns.org) · [AI results](AI_RESULTS.md) · [Engineering decisions](#engineering-decisions) · [Verification and recovery](#verification-and-recovery) · [Deployment](#deployment)
 
 </div>
 
@@ -29,6 +29,18 @@ My work spans source integration, data validation and processing, dashboard deve
 - **Individual opportunities:** browse selected posting facts and follow links to the original advertisements.
 
 The hosted postings sample contains selected real facts from allowlisted employer ATS and government hosts. It reflects a personal search and those source restrictions; it is not a representative survey of the Australian job market. The occupation series uses broader occupation groups, rather than an exact count of Data Engineer vacancies.
+
+## AI extraction and analyst
+
+Two local language-model features build on the deterministic pipeline. **Structured
+extraction** turns each advertisement into skills with requirement levels, seniority,
+experience, work mode, work rights and salary, with a quoted piece of evidence for every value.
+A **question-answering analyst** explains the published figures; deterministic code computes
+every statistic, and every number in an explanation is checked before it is shown.
+
+On 86 held-out labelled advertisements, the chosen setup scored 0.938 skills F1 and 0.896
+requirement-level accuracy, at $0.64 per 1,000 advertisements in batch. **[Measured results,
+method and limits →](AI_RESULTS.md)**
 
 ## Architecture
 
