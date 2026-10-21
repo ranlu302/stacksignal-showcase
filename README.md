@@ -2,112 +2,153 @@
 
 # StackSignal
 
-### See the market. Focus your next move.
+### Understand what employers are looking for.
 
-Explore employer skill demand, observed opportunities and advertised salaries—with explicit sample limits and reproducible data processing.
+StackSignal brings Australian job advertisements together so you can explore the skills employers ask for, compare roles and understand advertised salaries—with AI explanations you can check against the underlying figures.
 
-[**Explore the live demo →**](https://stacksignal.duckdns.org) · [AI results](AI_RESULTS.md) · [Engineering decisions](#engineering-decisions) · [Verification and recovery](#verification-and-recovery) · [Deployment](#deployment)
+[**Explore the demo →**](https://stacksignal.duckdns.org) · [What I built](#what-i-built) · [Technical details](#technical-details)
 
 </div>
 
-## Project at a glance
+![StackSignal: ridgelines of stacked data rising into one clear signal under the Southern Cross. Generative artwork; no data is depicted.](assets/hero-signal.png)
 
-My work spans source integration, data validation and processing, dashboard development, automated testing, infrastructure as code and release automation.
+## Why I built it
 
-- **Delivered:** two independent analytical pipelines and a read-only dashboard hosted on AWS.
-- **Engineering focus:** recoverable ingestion, consistent dataset publication, explicit metric contracts and tested release recovery.
-- **Core stack:** Python, Polars, Parquet, Pydantic, Streamlit and SQLite.
-- **Infrastructure and delivery:** AWS EC2, ECR and Systems Manager; Terraform, Docker and GitHub Actions with OIDC authentication.
+Job advertisements contain useful clues about what employers need, but those clues are scattered across individual listings. Comparing roles means reading many advertisements and working out which requirements appear repeatedly.
 
-![Illustrative StackSignal overview: capture job-market signals, check records, then explore skills, locations and salaries. Charts are schematic.](assets/overview.png)
+I built StackSignal to turn those scattered observations into a product people can explore: clear charts, role comparisons and AI explanations linked to the figures behind them.
 
-## What you can explore
+## What you can do
 
-- **Employer skill demand:** compare the share of usable job descriptions mentioning each tracked skill.
-- **Locations and salaries:** inspect observed opportunities by Australian city and eligible advertised annual salary distributions. Missing salaries and insufficient samples remain visible.
-- **Broader occupation trends:** follow monthly Jobs and Skills Australia vacancy statistics alongside the postings sample.
-- **Individual opportunities:** browse selected posting facts and follow links to the original advertisements.
+- **Explore with an AI analyst.** Choose questions such as “How do data engineer and data analyst jobs differ?” and read an explanation with supporting charts.
+- **See which skills appear most often.** Compare what employers request across roles and Australian cities.
+- **Explore advertised pay and vacancies.** View available salary figures, broader occupation trends and links to selected original advertisements.
 
-The hosted postings sample contains selected real facts from allowlisted employer ATS and government hosts. It reflects a personal search and those source restrictions; it is not a representative survey of the Australian job market. The occupation series uses broader occupation groups, rather than an exact count of Data Engineer vacancies.
+The public AI demo lets you choose from **23 previously recorded questions and answers**. You can also explore the figures interactively. Open-ended AI questions run in the local version.
 
-## AI extraction and analyst
+## What makes the AI useful
 
-Two local language-model features build on the deterministic pipeline. **Structured
-extraction** turns each advertisement into skills with requirement levels, seniority,
-experience, work mode, work rights and salary, with a quoted piece of evidence for every value.
-A **question-answering analyst** explains the published figures; deterministic code computes
-every statistic, and every number in an explanation is checked before it is shown.
+The AI explains the results; the application calculates the numbers. Before an explanation is shown, the application checks its numbers and references against the available results. If that check fails, it withholds the explanation and keeps the available figures visible.
 
-On 86 held-out labelled advertisements, the chosen setup scored 0.938 skills F1 and 0.896
-requirement-level accuracy, at $0.64 per 1,000 advertisements in batch. **[Measured results,
-method and limits →](AI_RESULTS.md)**
+The analyst can also ask for clarification, say there is not enough data, or explain that a question is outside its scope. These checks reduce some errors, but they do not guarantee that every statement is correct.
 
-## Architecture
+## What I built
 
-![StackSignal architecture: independent postings and occupation-trend pipelines feed a Streamlit application, alongside a separate private career store.](assets/architecture.svg)
+I built the project from collecting and organizing data through to the AI experience and its online deployment.
 
-The postings pipeline retains original captures, validates and normalizes records, extracts skills deterministically, and publishes analytical datasets. A separate pipeline processes official occupation-demand statistics. Metric functions are independent of dashboard presentation; personal application tracking uses a separate store.
-
-The diagram illustrates these logical boundaries. AWS hosts the read-only application; the batch pipeline itself has no cloud dependency.
-
-## Engineering decisions
-
-### Save progress before requesting the next page
-
-Each successful postings page is persisted immediately. If a later request fails, earlier captures remain available for processing without another provider request. Replaying the same inputs preserves the same logical records.
-
-**Tradeoff:** replay is supported; exact cursor resumption against a changing provider search is not guaranteed.
-
-### Publish related datasets as one generation
-
-Postings, extracted skills and processing state are written into a new generation. An atomic pointer switch publishes it only after all writes succeed. Readers resolve that pointer once per read, and a process lock rejects overlapping postings writers.
-
-**Failure behaviour:** failed publication leaves the previous generation selected. Corrupt raw JSON aborts publication rather than silently reducing the dataset.
-
-**Boundary:** this protects against process failures on supported local POSIX filesystems. It does not establish power-loss durability or distributed coordination, and does not cover the separate occupation-trend publisher.
-
-### Make metric definitions testable
-
-Skill demand uses the same usable-description cohort for numerator and denominator. Salary percentiles require at least 10 eligible observations, one configured currency and explicit annual salaries; estimates are excluded by default. Missing values remain missing, and hourly or daily rates are not annualized. A deterministic skill taxonomy makes matches inspectable.
-
-### Separate public facts from personal records
-
-An allowlisted export supplies the hosted application with posting facts and original links. Advertisement text, provider captures and personal application records are excluded. The public explorer has no application-writing controls, and Docker build checks reject private workspace files from the deployment image.
-
-## Deployment
-
-The application runs in Docker on a single AWS EC2 instance, with HTTPS provided by Caddy. Terraform defines the infrastructure. GitHub Actions uses OIDC to obtain temporary AWS credentials, publishes images to ECR and invokes deployment through Systems Manager.
-
-Tagged releases control what reaches the public site. The release path validates the image, deploys it and checks application health. A failed candidate health check triggers restoration of the previous container and returns a failure signal.
-
-**Tradeoff:** one instance keeps this portfolio deployment simple, but it is a single point of failure. The project does not claim high availability or zero-downtime deployment.
-
-## Verification and recovery
-
-Offline tests cover interrupted pagination, failed dataset publication, overlapping writers, readers pinned to a generation, replay consistency, corrupt inputs and metric boundaries. Automated quality checks include Ruff, pytest and fixture-based pipeline smoke checks.
-
-### Recorded AWS recovery exercise — 23 September 2026
-
-A healthy test container was established on the deployed instance. A deliberately broken image was then deployed over it through Systems Manager, using the deployment script with a separate container name.
-
-| Check | Recorded result |
+| Area | My contribution |
 |---|---|
-| Detect the unhealthy candidate | Health checks failed and triggered rollback. |
-| Restore the previous release | The original test container was running and healthy afterward. |
-| Surface the failure | The command returned exit status 1; Systems Manager reported failure. |
-| Preserve recovery state | The last-good image record remained unchanged. |
-| Isolate the exercise | The live application container retained its identity and start timestamp. |
+| **AI** | Built the analyst and a separate feature that extracts requirements from job advertisements; evaluated their results and costs. |
+| **Software engineering** | Built the application, tested how it handles failures, and automated deployment and recovery on AWS. |
+| **Data engineering** | Built the workflows that collect, clean and combine postings, calculate consistent figures and publish data safely. |
 
-This exercise verified health-check failure recovery through the deployment script and Systems Manager. It did not test failure propagation through GitHub Actions, continuous request availability, or recovery from every deployment failure. Subsequent startup-failure handling was tested locally; this historical exercise does not validate that later revision on AWS.
+## Try it in two minutes
 
-These are summaries of recorded internal checks. Application source, executable tests and operational records remain private; this showcase provides the product overview, illustrations and demo link. Production-scale throughput has not been benchmarked.
+1. [Open the demo](https://stacksignal.duckdns.org) and select **AI Analyst**.
+2. Choose a question in **Ask** to see a recorded answer and its chart.
+3. Try a role comparison, then explore **Figures** or **Market overview** yourself.
 
-## Data sources
-
-Adapters are implemented for TheirStack and Adzuna; live ingestion and public display remain subject to applicable permissions. Adzuna remains evaluation-only without the required written licence. The hosted export is a separate, restricted selection of posting facts.
-
-Occupation trends use the [Jobs and Skills Australia Internet Vacancy Index](https://www.jobsandskills.gov.au/data/internet-vacancy-index). © Commonwealth of Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+**Keep the scope in mind:** the postings come from a personal search and permitted public sources, not a representative survey of Australia's job market. Missing salaries and small samples limit what can be concluded.
 
 ---
 
-Built by [Ran Lu](https://github.com/ranlu302) · **StackSignal — Data Engineering Job Market Intelligence**
+## Technical details
+
+The sections below explain the implementation, evaluation and engineering tradeoffs.
+
+[AI workflow](#from-question-to-checked-explanation) · [Evaluation](#measured-results) · [Software engineering](#software-engineering) · [Data engineering](#data-engineering) · [Data scope](#data-scope-is-part-of-the-answer)
+
+![StackSignal code and data flow: postings, occupation trends and the career store with AI features feed one application, delivered through tagged releases to AWS. Logical flow; not every module is shown.](assets/flow-signal.png)
+
+The diagram shows the local and hosted application boundaries. The analyst reads only the public export in both modes; local access to other data belongs to the wider application.
+
+## From question to checked explanation
+
+| Step | Responsibility | Inspectable evidence |
+|---|---|---|
+| **1. Interpret** | Model proposes a structured summary or comparison; code validates roles and cities. | Intent and selected filters; clarification or unsupported outcome when appropriate. |
+| **2. Compute** | Deterministic tools calculate skill shares, Wilson 95% intervals, eligible salary quartiles and role overlap. | Cohort sizes, result tables, source scope and public posting references. |
+| **3. Explain** | Model explains the supplied result. | Recorded call usage and timing. |
+| **4. Check** | Code checks numerical support and citation references. | Numbers mapped to result fields; failed prose is withheld while available computed figures remain visible. |
+
+The checker is a numerical and reference guard, **not a guarantee that every sentence is correct**. It can miss an incorrect claim without a number, and a supported number alone does not establish sound reasoning.
+
+## Two AI features, separate responsibilities
+
+**AI Analyst** explains published aggregates. Its input is the public export, even when used locally. It does not open the personal career database or receive shell, SQL or arbitrary file-access tools.
+
+**Structured extraction** reads advertisements locally into a fixed schema: skills and requirement levels, seniority, minimum experience, work mode, work rights and salary, with evidence quotes. A skill is retained only when the deterministic matcher also finds it. Extraction results sit beside the authoritative fields; **they do not feed the published market metrics**.
+
+## Hosted and local execution
+
+| Experience | What runs |
+|---|---|
+| Hosted Ask tab | Replays real answers recorded locally; no question box or live model calls. |
+| Hosted Figures tab | Interactive deterministic analysis of the published data; no model required. |
+| Local Ask tab | Accepts questions, validates their intent, computes results, then checks the model's explanation. |
+
+The bundled library was recorded on **20 October 2026**: 14 answered, 6 unsupported, 2 with insufficient data, and 1 requesting clarification. These are demonstration outcomes, not an accuracy score. Each record carries its model, recording date, cost and dataset fingerprint; saved explanations are checked again before publication.
+
+## Measured results
+
+| Evaluation | Recorded result | How to read it |
+|---|---|---|
+| Chosen extraction setup, 86 scored held-out advertisements | **0.938 skills F1 · 0.896 requirement-level accuracy** | Small labelled set; held-out results were inspected during development. |
+| Whole-store extraction run | **$5.22 for 8,194 submissions** | Approximately $0.64 per 1,000 in batch at the measured prices; not a pricing promise. |
+| Analyst held-out evaluation, 21 cases | **21/21 correct outcomes · 8/12 explanations passed** | Historical run; correct outcomes and accepted prose are different measures. |
+
+Three of the four withheld held-out explanations exposed a rounding-check issue, subsequently fixed with a regression test. The remaining explanation used an unsupported rounding. The held-out evaluation was not rerun after the fix; its original result is preserved.
+
+The extraction evaluation used a 120-advertisement labelled set with 30 development and 90 held-out items; deduplication left 86 scored held-out items. Labels combined manual work and model assistance with rule-based review. The small set and repeated inspection of held-out results limit how broadly these scores generalize; agreement between labellers does not establish ground truth.
+
+## Software engineering
+
+Data access, analytical tools, model orchestration and dashboard presentation have separate responsibilities. Pydantic contracts define structured inputs and results. Model-proposed roles and cities are validated before execution, and unavailable or unsupported results have explicit outcomes.
+
+Offline tests cover interrupted ingestion, replay, failed publication, overlapping writers, metric boundaries and analyst checks. Quality checks include Ruff, pytest and fixture-based pipeline smoke checks. Public-export verification and Docker image checks enforce the separation between shareable data and private workspace records.
+
+### Deployment and recovery
+
+Terraform defines the hosting infrastructure. GitHub Actions uses OIDC for temporary AWS credentials, publishes Docker images to ECR and deploys tagged releases through Systems Manager. Caddy provides HTTPS on a single EC2 instance.
+
+Health checks reject an unhealthy candidate and the deployment script restores the previous container. A recorded AWS exercise on **23 September 2026** verified unhealthy-candidate recovery through Systems Manager using an isolated test container.
+
+**Boundary:** the single instance is a single point of failure. The exercise did not establish high availability, zero downtime, GitHub Actions failure propagation or recovery from every possible failure.
+
+**Tools:** Python · Pydantic · Streamlit · pytest · Ruff · Docker · Terraform · GitHub Actions · AWS EC2 / ECR / Systems Manager.
+
+## Data engineering
+
+The postings pipeline retains original captures, validates and normalizes records, deduplicates them, extracts skills deterministically and publishes analytical datasets. A separate pipeline processes official occupation-demand statistics. Metric functions are independent of dashboard presentation and model explanations.
+
+| Decision | Why it matters | Boundary |
+|---|---|---|
+| Persist every successful ingestion page | Earlier captures survive a later request failure and can be replayed. | Exact cursor resumption against a changing provider search is not guaranteed. |
+| Publish related postings datasets as one generation | An atomic pointer switch keeps readers on a consistent set; a process lock rejects overlapping writers. | Local POSIX process-failure protection, not distributed coordination or power-loss durability. |
+| Define metric cohorts explicitly | Skill numerators and denominators use the same usable-description cohort; salary eligibility and missingness remain testable. | The separate occupation-trend pipeline has its own publication path. |
+| Separate aggregates from public posting examples | Eligible broader counts support analysis while individual references remain restricted to allowlisted hosts. | Posting examples are only a subset of the aggregate cohort. |
+
+**Tools:** Python · Polars · Parquet · SQLite · deterministic skill taxonomy. The batch pipeline has no cloud dependency. Local LLM extraction results remain separate and do not feed published market metrics.
+
+## Data scope is part of the answer
+
+The postings reflect a personal search and source restrictions, **not a representative survey of the Australian labour market**. Role categories come from job titles and may overlap.
+
+- **Analyst aggregates:** precomputed figures over in-scope sources, excluding Adzuna. Job-board and aggregator rows are not republished as individual listings.
+- **Public posting references:** allowlisted employer ATS and government hosts only. These examples are a subset of the aggregate cohort, not exhaustive evidence for every contributing posting.
+- **Private material:** advertisement text, raw captures, evidence quotes and personal application records stay outside the public export and deployment image.
+- **Sample limits:** skill-demand answers require at least 10 usable descriptions per side. Salary percentiles require at least 10 eligible annual observations; missing salaries remain missing, and hourly or daily rates are not annualized.
+
+Intervals describe uncertainty within the observed sample; they do not correct its selection bias.
+
+## Sources and limitations
+
+Adapters exist for TheirStack and Adzuna; access does not establish permission to republish or aggregate. Adzuna remains evaluation-only without the required written licence and is excluded from public analyst aggregates.
+
+Occupation trends use the [Jobs and Skills Australia Internet Vacancy Index](https://www.jobsandskills.gov.au/data/internet-vacancy-index). © Commonwealth of Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+This showcase presents the product, illustrations and summaries of recorded checks. Application source and operational records remain private. Production-scale throughput has not been benchmarked.
+
+---
+
+Built by [Ran Lu](https://github.com/ranlu302) · **StackSignal — Job Market Intelligence**
