@@ -12,13 +12,13 @@ StackSignal brings Australian job advertisements together so you can explore the
 
 ![StackSignal: ridgelines of stacked data rising into one clear signal under the Southern Cross. Generative artwork; no measured data is depicted.](assets/hero-signal.png)
 
-## Why I built it
+### Why I built it
 
 Job advertisements contain useful clues about what employers need, but those clues are scattered across individual listings. Comparing roles means reading many advertisements and working out which requirements appear repeatedly.
 
 I built StackSignal to turn those scattered observations into a product people can explore: clear charts, role comparisons and AI explanations linked to the figures behind them.
 
-## What you can do
+### What you can do
 
 - **Explore with an AI analyst.** Choose questions such as “How do data engineer and data analyst jobs differ?” and read an explanation with supporting charts.
 - **See which skills appear most often.** Compare what employers request across roles and Australian cities.
@@ -26,7 +26,7 @@ I built StackSignal to turn those scattered observations into a product people c
 
 The public AI demo lets you choose from **23 questions with recorded responses**. You can also explore the figures interactively. The local version also accepts open-ended questions.
 
-## What makes the AI useful
+### What makes the AI useful
 
 The AI explains the results; the application calculates the numbers. Before an explanation is shown, the application checks its numbers and references against the available results. If that check fails, it withholds the explanation and keeps the available figures visible.
 
@@ -42,15 +42,13 @@ I built the project end to end, from data collection and organisation to the AI 
 | **Software engineering** | Built the application, tested how it handles failures, and automated deployment and recovery on AWS. |
 | **Data engineering** | Built the workflows that collect, clean and combine postings, calculate consistent figures and publish data safely. |
 
-## Try it in two minutes
+### Try it in two minutes
 
 1. [Open the demo](https://stacksignal.duckdns.org) and select **AI Analyst**.
 2. Choose a question in **Ask** to see a recorded answer and its chart.
 3. Try a role comparison, then explore **Figures** or **Market overview** yourself.
 
 **Keep the scope in mind:** the postings come from a personal search and permitted public sources, not a representative survey of Australia's job market. Missing salaries and small samples limit what can be concluded.
-
----
 
 ## Technical details
 
