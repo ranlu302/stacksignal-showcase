@@ -65,6 +65,10 @@ I built the checks to withhold these answers rather than show unsupported result
 
 ## Technical details
 
+![StackSignal data and deployment flow: job postings, occupation trends and the career store feed a Streamlit application, deployed through tagged releases to AWS.](assets/flow-signal.png)
+
+This overview shows the main data and deployment paths. The aggregate analyst reads the public export; the separate local advertisement-retrieval path is described below and is not shown in the diagram.
+
 ### Architecture and technologies
 
 **Data processing:** Python and Polars normalise and deduplicate postings, extract skills through a deterministic taxonomy, and produce Parquet datasets. Related posting datasets are published as one generation through an atomic pointer switch; a process lock rejects overlapping writers. Successful ingestion pages are saved individually so earlier captures can be replayed after a later request fails.
