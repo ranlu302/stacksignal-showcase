@@ -28,7 +28,7 @@ The current library has **eight recorded questions**. Hosted answers are recordi
 
 ### One question, from evidence to answer
 
-For “Which roles can be done fully remotely?”, the local application finds relevant advertisement passages, reorders them by relevance, and asks the model to label each advertisement **yes**, **no** or **unclear**, with a supporting quote.
+For “Which roles can be done fully remotely?”, the local application's question router sends the question to the advertisement reader, which finds relevant advertisement passages, reorders them by relevance, and asks the model to label each advertisement **yes**, **no** or **unclear**, with a supporting quote.
 
 Code checks that each quote occurs in its retrieved passage and that the answer's references and numbers have support. If a check fails, the answer is withheld. The public recording shows permitted labels and source links; advertisement passages and quotes stay local.
 
@@ -38,7 +38,7 @@ This is retrieval-augmented generation (**RAG**): the model receives relevant so
 
 - **Backend and application:** separated data access, calculations, model orchestration and presentation, with validated inputs and explicit failure outcomes.
 - **Data pipelines:** captured, cleaned and deduplicated postings; calculated consistent metrics; published related datasets together so readers see a consistent version.
-- **Applied AI:** built question routing, an aggregate analyst, advertisement retrieval and reading, and structured requirement extraction. Evaluated quality, latency and cost.
+- **Applied AI:** built an aggregate analyst, advertisement retrieval and reading, and structured requirement extraction, with question routing that chooses between figures and advertisement evidence, asks for clarification, or declines. Evaluated quality, latency and cost.
 - **Delivery:** defined AWS infrastructure with Terraform, automated tagged deployments through GitHub Actions, and exercised recovery from an unhealthy container.
 
 **Core tools:** Python · Polars · SQLite · Pydantic · Streamlit · pytest · Docker · Terraform · GitHub Actions · AWS.
@@ -85,7 +85,7 @@ Selected measurements provide evidence, with limits:
 
 - **Routing:** the model selected the expected route for 19 of 20 held-out questions, compared with 9 for keyword rules. This is a small evaluation.
 - **Retrieval:** reducing candidates kept nDCG@10, a ranking-quality measure, similar on 49 labelled queries (0.752 to 0.753), but reduced it on 12 paraphrased queries (0.904 to 0.855). The latter set was model-judged, not owner-reviewed, and its candidate pool favoured the larger setting.
-- **Extraction:** skills F1 was 0.938 on 86 scored held-out advertisements. Labels were manually and model-assisted, and held-out results were inspected during development, limiting generalisation.
+- **Extraction:** skills F1 was 0.938 on 86 scored held-out advertisements. Labels were created manually with model assistance, and held-out results were inspected during development, limiting generalisation.
 
 These measurements concern separate components. They are not an overall accuracy score for the application.
 
