@@ -65,9 +65,9 @@ I built the checks to withhold these answers rather than show unsupported result
 
 ## Technical details
 
-![StackSignal data and deployment flow: job postings, occupation trends and the career store feed a Streamlit application, deployed through tagged releases to AWS.](assets/flow-signal.png)
+![StackSignal data and deployment flow: job postings, occupation trends and the career store feed a Streamlit application through a question router, deployed through tagged releases to AWS.](assets/flow-signal.png)
 
-This overview shows the main data and deployment paths. The aggregate analyst reads the public export; the separate local advertisement-retrieval path is described below and is not shown in the diagram.
+This overview shows the main data and deployment paths. A question router sends each question to the aggregate analyst, which reads the public export, or to the advertisement reader, which runs locally over a private retrieval index (dotted).
 
 ### Architecture and technologies
 
