@@ -20,7 +20,7 @@ This is a personal project. I built the data pipelines, application, AI workflow
 
 ## Try it in two minutes
 
-1. [Open the demo](https://stacksignal.duckdns.org) and select **AI Analyst**.
+1. Open the website and select **AI Analyst**.
 2. Choose “How do data engineer and data analyst jobs differ?” to see a recorded explanation with supporting figures.
 3. Choose “Which roles can be done fully remotely?” to see labels and links to individual advertisements.
 
@@ -96,7 +96,3 @@ Terraform defines the AWS infrastructure. GitHub Actions uses OIDC for temporary
 Postings reflect a personal search and permitted sources, not a representative survey of Australia's labour market. Small samples and missing salaries constrain conclusions; hourly and daily rates are not annualised. Public listing references are restricted to allowlisted employer ATS and government hosts. Advertisement text, quotes and personal application records stay outside the public export and deployment image. Adzuna remains evaluation-only and is excluded from public analyst aggregates.
 
 Occupation trends use the [Jobs and Skills Australia Internet Vacancy Index](https://www.jobsandskills.gov.au/data/internet-vacancy-index). © Commonwealth of Australia, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
----
-
-Built by [Ran Lu](https://github.com/ranlu302) · **StackSignal — Job Market Intelligence**
