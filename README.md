@@ -24,7 +24,7 @@ This is a personal project. I built the data pipelines, application, AI workflow
 2. Choose “How do data engineer and data analyst jobs differ?” to see a recorded explanation with supporting figures.
 3. Choose “Which roles can be done fully remotely?” to see labels and links to individual advertisements.
 
-The current library has **eight recorded questions**. Hosted answers are recordings, with no live model calls; the **Figures** tab remains interactive. Open-ended questions and advertisement retrieval run locally.
+The current library has **ten recorded questions**. Hosted answers are recordings, with no live model calls; the **Figures** tab remains interactive. Open-ended questions and advertisement retrieval run locally.
 
 ### One question, from evidence to answer
 
