@@ -22,13 +22,14 @@ This is a personal project. I built the data pipelines, application, AI workflow
 
 1. Open the website and select **AI Analyst**.
 2. Choose “How do data engineer and data analyst jobs differ?” to see a recorded explanation with supporting figures.
-3. Choose “Which roles can be done fully remotely?” to see labels and links to individual advertisements.
+3. Choose “Which jobs can be done fully remotely?” to see labels and links to individual advertisements.
+4. Choose “Which city pays data engineers the most?” to see the analyst decline to rank cities rather than guess, and say what it can compare instead.
 
 The current library has **ten recorded questions**. Hosted answers are recordings, with no live model calls; the **Figures** tab remains interactive. Open-ended questions and advertisement retrieval run locally.
 
 ### One question, from evidence to answer
 
-For “Which roles can be done fully remotely?”, the local application's question router sends the question to the advertisement reader, which finds relevant advertisement passages, reorders them by relevance, and asks the model to label each advertisement **yes**, **no** or **unclear**, with a supporting quote.
+For “Which jobs can be done fully remotely?”, the local application's question router sends the question to the advertisement reader, which finds relevant advertisement passages, reorders them by relevance, and asks the model to label each advertisement **yes**, **no** or **unclear**, with a supporting quote.
 
 Code checks that each quote occurs in its retrieved passage and that the answer's references and numbers have support. If a check fails, the answer is withheld. The public recording shows permitted labels and source links; advertisement passages and quotes stay local.
 
@@ -37,7 +38,7 @@ This is retrieval-augmented generation (**RAG**): the model receives relevant so
 ## What I built
 
 - **Backend and application:** separated data access, calculations, model orchestration and presentation, with validated inputs and explicit failure outcomes.
-- **Data pipelines:** captured, cleaned and deduplicated postings; calculated consistent metrics; published related datasets together so readers see a consistent version.
+- **Data pipelines:** captured, cleaned and deduplicated postings; grouped thousands of job titles into twelve role families and matched employers posted under different names, so one advertisement is counted once; calculated consistent metrics; published related datasets together so readers see a consistent version.
 - **Applied AI:** built an aggregate analyst, advertisement retrieval and reading, and structured requirement extraction, with question routing that chooses between figures and advertisement evidence, asks for clarification, or declines. Evaluated quality, latency and cost.
 - **Delivery:** defined AWS infrastructure with Terraform, automated tagged deployments through GitHub Actions, and exercised recovery from an unhealthy container.
 
@@ -71,7 +72,7 @@ This overview shows the main data and deployment paths. A question router sends 
 
 ### Architecture and technologies
 
-**Data processing:** Python and Polars normalise and deduplicate postings, extract skills through a deterministic taxonomy, and produce Parquet datasets. Related posting datasets are published as one generation through an atomic pointer switch; a process lock rejects overlapping writers. Successful ingestion pages are saved individually so earlier captures can be replayed after a later request fails.
+**Data processing:** Python and Polars normalise and deduplicate postings, extract skills through a deterministic taxonomy, and produce Parquet datasets. Job titles join role families by keyword rules, each tested against false matches; the AI engineer and ML engineer families were separated after their advertisements proved to ask for different work (LLM applications and agents versus model training and MLOps). Related posting datasets are published as one generation through an atomic pointer switch; a process lock rejects overlapping writers. Successful ingestion pages are saved individually so earlier captures can be replayed after a later request fails.
 
 **Application and AI:** Streamlit presents the results, with Pydantic contracts validating structured inputs and outputs. The aggregate analyst reads only the public export. Code calculates skill shares, salary quartiles and role comparisons before the model explains them. Separate Claude API extraction produces structured requirements with evidence quotes; those results do not feed published metrics.
 
